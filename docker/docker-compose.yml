@@ -1,0 +1,21 @@
+services:
+  ollama:
+    image: ollama/ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+
+  maahinen:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    depends_on:
+      - ollama
+    environment:
+      - OLLAMA_URL=http://ollama:11434
+    stdin_open: true
+    tty: true
+
+volumes:
+  ollama_data:
