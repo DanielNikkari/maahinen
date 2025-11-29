@@ -6,7 +6,9 @@
         A Local LLM CLI Coding Assistant
     </h4>
     <div>
-        <img src="https://github.com/DanielNikkari/maahinen/actions/workflows/go.yml/badge.svg" alt="Go">
+        <a href="https://github.com/DanielNikkari/maahinen/actions/workflows/go.yml">
+            <img src="https://github.com/DanielNikkari/maahinen/actions/workflows/go.yml/badge.svg" alt="Go">
+        </a>
     </div>
 </div>
 
