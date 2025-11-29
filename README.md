@@ -1,4 +1,7 @@
 <div align="center">
+    <a href="#">
+        <img src="/docs/Maahinen.png" alt="Maahinen Logo" >
+    </a>
     <h1>
         Maahinen
     </h1>
