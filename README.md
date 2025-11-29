@@ -1,0 +1,1 @@
+# Maahinen - A Local CLI LLM Coding Assistant
