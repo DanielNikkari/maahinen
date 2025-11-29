@@ -1,9 +1,6 @@
 build:
 	go build -o bin/maahinen ./cmd/maahinen
 
-run:
-	go run ./cmd/maahinen
-
 test:
 	go test ./...
 
@@ -12,6 +9,9 @@ clean:
 
 dev: build
 	./bin/maahinen
+
+run:
+	@./bin/maahinen
 
 tidy:
 	go mod tidy

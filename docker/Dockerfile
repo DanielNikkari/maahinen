@@ -8,4 +8,4 @@ COPY . .
 
 RUN make build
 
-CMD ["./bin/maahinen"]
+CMD ["make", "run"]
