@@ -21,10 +21,10 @@ func Run() error {
 		ollamaURL = defaultURL
 	}
 
-	// Install Ollama if not yet installed
 	if ollama.IsRunningAt(ollamaURL) {
-		fmt.Println("✓ Ollama server is running")
+		fmt.Println("✅ Ollama server is running")
 	} else {
+		// Install Ollama if not yet installed
 		if !ollama.IsInstalled() {
 			fmt.Println("Ollama is not installed.")
 			if !confirm("Would you like to install it now?") {
