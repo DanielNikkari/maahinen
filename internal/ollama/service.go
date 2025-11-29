@@ -9,14 +9,18 @@ import (
 
 const defaultURL = "http://localhost:11434"
 
-func IsRunning() bool {
+func IsRunningAt(baseURL string) bool {
 	client := &http.Client{Timeout: 2 * time.Second}
-	resp, err := client.Get(defaultURL + "/api/tags")
+	resp, err := client.Get(baseURL + "/api/tags")
 	if err != nil {
 		return false
 	}
 	defer resp.Body.Close()
 	return resp.StatusCode == http.StatusOK
+}
+
+func IsRunning() bool {
+	return IsRunningAt(defaultURL)
 }
 
 func Start() error {
