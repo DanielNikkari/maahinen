@@ -1,6 +1,6 @@
 <div align="center">
     <a href="#">
-        <img src="/docs/Maahinen.png" alt="Maahinen Logo" >
+        <img src="/docs/Maahinen.png" alt="Maahinen Logo" height="250px" >
     </a>
     <h1>
         Maahinen
