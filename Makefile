@@ -1,5 +1,5 @@
 build:
-	go build -o bin/maahinen .cmd/maahinen/
+	go build -o bin/maahinen ./cmd/maahinen
 
 run:
 	go run ./cmd/maahinen

@@ -1,0 +1,42 @@
+# Binaries
+bin/
+*.exe
+*.dll
+*.so
+*.dylib
+maahinen
+
+# Test and coverage
+*.test
+*.out
+coverage.html
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker (don't send docker files into docker build)
+Dockerfile
+docker-compose*.yml
+.dockerignore
+
+# Docs (optional - remove if you need these in container)
+README.md
+LICENSE
+docs/
+
+# Development files
+.env
+.env.*
+*.log
+tmp/
