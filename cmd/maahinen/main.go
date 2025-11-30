@@ -4,12 +4,14 @@ import (
 	"fmt"
 	"os"
 
+	"maahinen/internal/agent"
 	"maahinen/internal/llm"
 	"maahinen/internal/setup"
 )
 
 func main() {
-	if err := setup.Run(); err != nil {
+	model, err := setup.Run()
+	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
@@ -20,18 +22,12 @@ func main() {
 		ollamaURL = "http://localhost:11434"
 	}
 
-	client := llm.NewClient(ollamaURL, "llama3.2:3b")
+	client := llm.NewClient(ollamaURL, model)
 
-	messages := []llm.Message{
-		{Role: llm.RoleUser, Content: "Say hello in Finnish!"},
-	}
-
-	fmt.Println("Sending message...")
-	resp, err := client.Chat(messages)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Chat error: %v\n", err)
+	// Create an Agent and run the agent loop
+	a := agent.NewAgent(client)
+	if err := a.Run(); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
-
-	fmt.Printf("Response: %s\n", resp.Content)
 }
