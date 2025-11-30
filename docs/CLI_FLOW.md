@@ -31,3 +31,10 @@ POST http://localhost:11434/api/pull
 # Check version
 GET http://localhost:11434/api/version
 ```
+
+## Ollama API ENDPOITNS NEEDED FOR LLM INFERENCE
+
+```bash
+POST http://localhost:11434/api/chat
+{"model": "qwen2.5-coder:7b", "messages": ["role": "user", "content": "Say hello in Finnish!"], "stream": "false"}
+```
