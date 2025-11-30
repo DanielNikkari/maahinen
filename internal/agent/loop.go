@@ -9,9 +9,9 @@ import (
 	"strings"
 	"time"
 
-	"maahinen/internal/llm"
-	"maahinen/internal/tools"
-	"maahinen/internal/ui"
+	"github.com/DanielNikkari/maahinen/internal/llm"
+	"github.com/DanielNikkari/maahinen/internal/tools"
+	"github.com/DanielNikkari/maahinen/internal/ui"
 )
 
 var actionAdjectives = [...]string{
@@ -40,10 +40,24 @@ func NewAgent(client *llm.Client, registry *tools.Registry) *Agent {
 		messages: []llm.Message{
 			{
 				Role: llm.RoleSystem,
-				Content: `You are Maahinen, a helpful coding assistant with access to tools.
-							When you need to run commands, use the bash tool.
-							Always explain what you're doing before running commands.
-							Be concise and practical.`,
+				Content: `You are Maahinen, a helpful coding assistant.
+
+IMPORTANT RULES FOR TOOL USAGE:
+- Only use the bash tool when the use of the tool is actually needed to complete the request.
+- For greetings, questions, explanations, or conversation, just respond with text. Do NOT use tools.
+- When in doubt, respond with text first and ask if the user wants you to run a command.
+
+Examples of when NOT to use tools:
+- "Hello" → Just say your greetings back
+- "How do I write a for loop?" → Explain with text
+- "What is Go?" → Explain with text
+
+Examples of when to use tools:
+- "List files in this directory" → Use bash: ls
+- "What's my Go version?" → Use bash: go version
+- "Create a file called test.txt" → Use bash: echo "content" > test.txt
+
+Be concise and practical.`,
 			},
 		},
 	}

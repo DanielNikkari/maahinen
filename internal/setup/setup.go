@@ -7,8 +7,8 @@ import (
 	"strconv"
 	"strings"
 
-	"maahinen/internal/ollama"
-	"maahinen/internal/ui"
+	"github.com/DanielNikkari/maahinen/internal/ollama"
+	"github.com/DanielNikkari/maahinen/internal/ui"
 )
 
 const defaultURL = "http://localhost:11434"

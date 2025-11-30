@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"os"
 
-	"maahinen/internal/agent"
-	"maahinen/internal/llm"
-	"maahinen/internal/setup"
-	"maahinen/internal/tools"
-	"maahinen/internal/ui"
+	"github.com/DanielNikkari/maahinen/internal/agent"
+	"github.com/DanielNikkari/maahinen/internal/llm"
+	"github.com/DanielNikkari/maahinen/internal/setup"
+	"github.com/DanielNikkari/maahinen/internal/tools"
+	"github.com/DanielNikkari/maahinen/internal/ui"
 )
 
 func main() {
