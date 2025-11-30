@@ -32,7 +32,7 @@ This installs the `maahinen` binary to your `$GOPATH/bin`.
 <!-- FOOTER -->
 ---
 <div>
-    <p align="center">Licensed under MIT</p>
+    <a href="/LICENSE"><p align="center">Licensed under MIT</p></a>
     <div align="right">
         <a href="#">
             <img src="/docs/Maahinen.png" alt="Maahinen logo" height="60">
