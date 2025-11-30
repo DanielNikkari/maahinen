@@ -33,6 +33,10 @@ type Agent struct {
 
 func NewAgent(client *llm.Client, registry *tools.Registry) *Agent {
 	client.RegisterTool(llm.BashToolDefinition())
+	client.RegisterTool(llm.FileReadToolDefinition())
+	client.RegisterTool(llm.FileWriteToolDefinition())
+	client.RegisterTool(llm.FileEditToolDefinition())
+	client.RegisterTool(llm.FileListToolDefinition())
 
 	return &Agent{
 		client: client,

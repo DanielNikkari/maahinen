@@ -30,6 +30,10 @@ func main() {
 	// Create tool registry
 	registry := tools.NewRegistry()
 	registry.Register(tools.NewBashTool(""))
+	registry.Register(tools.NewFileReadTool(""))
+	registry.Register(tools.NewFileWriteTool(""))
+	registry.Register(tools.NewFileEditTool(""))
+	registry.Register(tools.NewFileListTool(""))
 
 	// Create an Agent and run the agent loop
 	a := agent.NewAgent(client, registry)

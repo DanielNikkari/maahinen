@@ -96,7 +96,7 @@ func ParseToolCallFromContent(content string) (*ToolCall, bool) {
 	return &ToolCall{
 		Function: ToolFunction{
 			Name:      tc.Name,
-			Arguments: tc.Arguments,
+			Arguments: args,
 		},
 	}, true
 }
