@@ -7,7 +7,7 @@
         Maahinen
     </h1>
     <h4>
-        A Local LLM CLI Coding Assistant
+        a local agentic LLM CLI coding assistant
     </h4>
     <div>
         <a href="https://github.com/DanielNikkari/maahinen/actions/workflows/go.yml">
