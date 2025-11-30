@@ -7,6 +7,7 @@ import (
 	"maahinen/internal/agent"
 	"maahinen/internal/llm"
 	"maahinen/internal/setup"
+	"maahinen/internal/tools"
 	"maahinen/internal/ui"
 )
 
@@ -23,12 +24,17 @@ func main() {
 		ollamaURL = "http://localhost:11434"
 	}
 
+	// Create LLM client
 	client := llm.NewClient(ollamaURL, model)
 
+	// Create tool registry
+	registry := tools.NewRegistry()
+	registry.Register(tools.NewBashTool(""))
+
 	// Create an Agent and run the agent loop
-	a := agent.NewAgent(client)
+	a := agent.NewAgent(client, registry)
 	if err := a.Run(); err != nil {
-		fmt.Fprintln(os.Stderr, ui.Color(ui.Red, fmt.Sprintf("Error: %v", err)))
+		ui.PrintError(err)
 		os.Exit(1)
 	}
 }

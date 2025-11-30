@@ -28,6 +28,11 @@ func (r *Registry) Register(t Tool) {
 	r.tools[t.Name()] = t
 }
 
+func (r *Registry) Get(name string) (Tool, bool) {
+	t, ok := r.tools[name]
+	return t, ok
+}
+
 func (r *Registry) List() []string {
 	names := make([]string, 0, len(r.tools))
 	for name := range r.tools {

@@ -2,6 +2,7 @@ package agent
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"math/rand"
 	"os"
@@ -9,6 +10,7 @@ import (
 	"time"
 
 	"maahinen/internal/llm"
+	"maahinen/internal/tools"
 	"maahinen/internal/ui"
 )
 
@@ -26,15 +28,22 @@ var actionAdjectives = [...]string{
 type Agent struct {
 	client   *llm.Client
 	messages []llm.Message
+	tools    *tools.Registry
 }
 
-func NewAgent(client *llm.Client) *Agent {
+func NewAgent(client *llm.Client, registry *tools.Registry) *Agent {
+	client.RegisterTool(llm.BashToolDefinition())
+
 	return &Agent{
 		client: client,
+		tools:  registry,
 		messages: []llm.Message{
 			{
-				Role:    llm.RoleSystem,
-				Content: "You are Maahinen, a helpful coding assistant. You help users with programming tasks, answer questions about code, and assist with debugging. Be concise and practical.",
+				Role: llm.RoleSystem,
+				Content: `You are Maahinen, a helpful coding assistant with access to tools.
+							When you need to run commands, use the bash tool.
+							Always explain what you're doing before running commands.
+							Be concise and practical.`,
 			},
 		},
 	}
@@ -73,6 +82,15 @@ func (a *Agent) Run() error {
 			Content: input,
 		})
 
+		if err := a.processResponse(); err != nil {
+			ui.PrintError(err)
+			a.messages = a.messages[:len(a.messages)-1]
+		}
+	}
+}
+
+func (a *Agent) processResponse() error {
+	for {
 		spinner := ui.NewSpinner("wizard")
 		r := rand.New(rand.NewSource(time.Now().UnixNano()))
 		actionAdj := actionAdjectives[r.Intn(len(actionAdjectives))]
@@ -83,13 +101,58 @@ func (a *Agent) Run() error {
 		spinner.Stop()
 
 		if err != nil {
-			fmt.Printf("\nError: %v\n\n", err)
-			a.messages = a.messages[:len(a.messages)-1]
+			return err
+		}
+
+		a.messages = append(a.messages, *resp)
+
+		if resp.HasToolCalls() {
+			for _, tc := range resp.ToolCalls {
+				if err := a.executeTool(tc); err != nil {
+					return err
+				}
+			}
 			continue
 		}
 
-		fmt.Printf("%s%s\n\n", ui.AssistantPrompt(), resp.Content)
-
-		a.messages = append(a.messages, *resp)
+		if resp.Content != "" {
+			fmt.Printf("%s%s\n\n", ui.AssistantPrompt(), resp.Content)
+		}
+		return nil
 	}
+}
+
+func (a *Agent) executeTool(tc llm.ToolCall) error {
+	tool, ok := a.tools.Get(tc.Function.Name)
+	if !ok {
+		return fmt.Errorf("unknown tool: %s", tc.Function.Name)
+	}
+
+	fmt.Printf("%s Running: %s\n", ui.Color(ui.Yellow, "⚡"), tc.Function.Name)
+	if cmd, ok := tc.Function.Arguments["command"].(string); ok {
+		fmt.Printf("   %s\n", ui.Color(ui.Dim, cmd))
+	}
+
+	result, err := tool.Execute(context.Background(), tc.Function.Arguments)
+	if err != nil {
+		return err
+	}
+
+	if result.Success {
+		fmt.Printf("%s\n", ui.Color(ui.BrightGreen, "✓ Success"))
+	} else {
+		fmt.Printf("%s %s\n", ui.Color(ui.Red, "✗ Failed:"), result.Error)
+	}
+	if result.Output != "" {
+		fmt.Printf("%s\n", result.Output)
+	}
+	fmt.Println()
+
+	// Add tool result to messages
+	a.messages = append(a.messages, llm.Message{
+		Role:    llm.RoleTool,
+		Content: result.Output,
+	})
+
+	return nil
 }

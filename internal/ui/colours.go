@@ -49,3 +49,7 @@ func AssistantPrompt() string {
 func ActionAdjPrompt(actionAdj string) string {
 	return Color(BrightYellow, actionAdj)
 }
+
+func PrintError(err error) {
+	fmt.Println(Color(Red, fmt.Sprintf("Error: %v", err)))
+}

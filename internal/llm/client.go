@@ -11,6 +11,7 @@ import (
 type Client struct {
 	baseURL    string
 	model      string
+	tools      []Tool
 	httpClient *http.Client
 }
 
@@ -18,16 +19,22 @@ func NewClient(baseURL, model string) *Client {
 	return &Client{
 		baseURL: baseURL,
 		model:   model,
+		tools:   []Tool{},
 		httpClient: &http.Client{
 			Timeout: 5 * time.Minute,
 		},
 	}
 }
 
+func (c *Client) RegisterTool(tool Tool) {
+	c.tools = append(c.tools, tool)
+}
+
 func (c *Client) Chat(messages []Message) (*Message, error) {
 	req := ChatRequest{
 		Model:    c.model,
 		Messages: messages,
+		Tools:    c.tools,
 		Stream:   false,
 	}
 
@@ -56,6 +63,10 @@ func (c *Client) Chat(messages []Message) (*Message, error) {
 	}
 
 	return &chatResp.Message, nil
+}
+
+func (m *Message) HasToolCalls() bool {
+	return len(m.ToolCalls) > 0
 }
 
 func (c *Client) Model() string {
