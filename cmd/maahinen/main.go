@@ -7,12 +7,13 @@ import (
 	"maahinen/internal/agent"
 	"maahinen/internal/llm"
 	"maahinen/internal/setup"
+	"maahinen/internal/ui"
 )
 
 func main() {
 	model, err := setup.Run()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		fmt.Fprintln(os.Stderr, ui.Color(ui.Red, fmt.Sprintf("Error: %v", err)))
 		os.Exit(1)
 	}
 
@@ -27,7 +28,7 @@ func main() {
 	// Create an Agent and run the agent loop
 	a := agent.NewAgent(client)
 	if err := a.Run(); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		fmt.Fprintln(os.Stderr, ui.Color(ui.Red, fmt.Sprintf("Error: %v", err)))
 		os.Exit(1)
 	}
 }
