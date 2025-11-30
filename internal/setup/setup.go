@@ -3,18 +3,22 @@ package setup
 import (
 	"bufio"
 	"fmt"
-	"maahinen/internal/ollama"
 	"os"
 	"strconv"
 	"strings"
+
+	"maahinen/internal/ollama"
+	"maahinen/internal/ui"
 )
 
 const defaultURL = "http://localhost:11434"
 
-func Run() error {
+func Run() (string, error) {
 	fmt.Println("🧙 Maahinen Setup")
 	fmt.Println("=================")
 	fmt.Println()
+
+	var selectedModel string
 
 	ollamaURL := os.Getenv("OLLAMA_URL")
 	if ollamaURL == "" {
@@ -22,55 +26,55 @@ func Run() error {
 	}
 
 	if ollama.IsRunningAt(ollamaURL) {
-		fmt.Println("✅ Ollama server is running")
+		ui.PrintColor(ui.BrightGreen, "✓ Ollama server is running")
 	} else {
 		// Install Ollama if not yet installed
 		if !ollama.IsInstalled() {
 			fmt.Println("Ollama is not installed.")
 			if !confirm("Would you like to install it now?") {
-				return fmt.Errorf("ollama is rquired to run Maahinen")
+				return "", fmt.Errorf("ollama is rquired to run Maahinen")
 			}
 			if err := ollama.Install(); err != nil {
-				return fmt.Errorf("failed to install Ollama: %w", err)
+				return "", fmt.Errorf("failed to install Ollama: %w", err)
 			}
-			fmt.Println("✅ Ollama installed succesfully!")
+			ui.PrintColor(ui.BrightGreen, "✓ Ollama installed succesfully!")
 		}
 
 		// Check if Ollama is running
 		if !ollama.IsRunning() {
 			fmt.Println("Starting Ollama server...")
 			if err := ollama.Start(); err != nil {
-				return fmt.Errorf("failed to start Ollama: %w", err)
+				return "", fmt.Errorf("failed to start Ollama: %w", err)
 			}
-			fmt.Println("✅ Ollama server started")
+			ui.PrintColor(ui.BrightGreen, "✓ Ollama server started")
 		} else {
-			fmt.Println("✅ Ollama server is running")
+			ui.PrintColor(ui.BrightGreen, "✓ Ollama server is running")
 		}
 	}
 
 	// Check for models
 	hasModels, err := ollama.HasModels(ollamaURL)
 	if err != nil {
-		return fmt.Errorf("failed to check models: %w", err)
+		return "", fmt.Errorf("failed to check models: %w", err)
 	}
 
 	if !hasModels {
 		fmt.Println()
 		fmt.Println("No models installed yet.")
-		if err := pickAndPullModel(ollamaURL); err != nil {
-			return err
+		if selectedModel, err = pickAndPullModel(ollamaURL); err != nil {
+			return "", err
 		}
 	} else {
 		models, _ := ollama.ListModels(ollamaURL)
-		fmt.Printf("✅ Found %d installed model(s)\n", len(models))
+		selectedModel = models[0].Name // Use first available model, TODO: change this later to let the user select the model
+		ui.PrintColor(ui.BrightGreen, fmt.Sprintf("✓ Using model: %s", selectedModel))
 	}
 
-	fmt.Println()
-	fmt.Println("✅ Setup complete! Maahinen is ready!")
-	return nil
+	ui.PrintColor(ui.BrightGreen, "✓ Setup complete! Maahinen is ready!")
+	return selectedModel, nil
 }
 
-func pickAndPullModel(ollamaURL string) error {
+func pickAndPullModel(ollamaURL string) (string, error) {
 	recommended := ollama.GetRecommendedModels()
 
 	fmt.Println()
@@ -86,7 +90,7 @@ func pickAndPullModel(ollamaURL string) error {
 	choice := prompt("Enter number (1-%d): ", len(recommended))
 	idx, err := strconv.Atoi(strings.TrimSpace(choice))
 	if err != nil || idx < 1 || idx > len(recommended) {
-		return fmt.Errorf("invalid selection")
+		return "", fmt.Errorf("invalid selection")
 	}
 
 	selected := recommended[idx-1]
@@ -104,11 +108,11 @@ func pickAndPullModel(ollamaURL string) error {
 	fmt.Println()
 
 	if err != nil {
-		return fmt.Errorf("failed to pull model: %w", err)
+		return "", fmt.Errorf("failed to pull model: %w", err)
 	}
 
 	fmt.Printf("✓ %s downloaded successfully!\n", selected.Name)
-	return nil
+	return selected.Name, nil
 }
 
 func confirm(question string) bool {

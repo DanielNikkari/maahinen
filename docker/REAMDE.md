@@ -38,6 +38,11 @@ docker compose build maahinen
 docker compose run maahinen
 ```
 
+### Start shell
+```bash
+docker compose exec maahinen bash
+```
+
 ### Stop services
 ```bash
 docker compose down
