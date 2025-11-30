@@ -22,14 +22,11 @@
 
 <!-- FOOTER -->
 ---
-<table width="100%">
-    <tr>
-        <td width="33%"></td>
-        <td width="33%" align="center">
-            <p>Licensed under MIT</p>
-        </td>
-        <td width="33%" align="right">
+<div>
+    <p align="center">Licensed under MIT</p>
+    <div align="right">
+        <a href="#">
             <img src="/docs/Maahinen.png" alt="Maahinen logo" height="60">
-        </td>
-    </tr>
-</table>
+        </a>
+    </div>
+</div>
