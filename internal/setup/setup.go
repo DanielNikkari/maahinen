@@ -3,10 +3,12 @@ package setup
 import (
 	"bufio"
 	"fmt"
-	"maahinen/internal/ollama"
 	"os"
 	"strconv"
 	"strings"
+
+	"maahinen/internal/ollama"
+	"maahinen/internal/ui"
 )
 
 const defaultURL = "http://localhost:11434"
@@ -24,7 +26,7 @@ func Run() (string, error) {
 	}
 
 	if ollama.IsRunningAt(ollamaURL) {
-		fmt.Println("✓ Ollama server is running")
+		ui.PrintColor(ui.BrightGreen, "✓ Ollama server is running")
 	} else {
 		// Install Ollama if not yet installed
 		if !ollama.IsInstalled() {
@@ -35,7 +37,7 @@ func Run() (string, error) {
 			if err := ollama.Install(); err != nil {
 				return "", fmt.Errorf("failed to install Ollama: %w", err)
 			}
-			fmt.Println("✓ Ollama installed succesfully!")
+			ui.PrintColor(ui.BrightGreen, "✓ Ollama installed succesfully!")
 		}
 
 		// Check if Ollama is running
@@ -44,9 +46,9 @@ func Run() (string, error) {
 			if err := ollama.Start(); err != nil {
 				return "", fmt.Errorf("failed to start Ollama: %w", err)
 			}
-			fmt.Println("✓ Ollama server started")
+			ui.PrintColor(ui.BrightGreen, "✓ Ollama server started")
 		} else {
-			fmt.Println("✓ Ollama server is running")
+			ui.PrintColor(ui.BrightGreen, "✓ Ollama server is running")
 		}
 	}
 
@@ -65,11 +67,10 @@ func Run() (string, error) {
 	} else {
 		models, _ := ollama.ListModels(ollamaURL)
 		selectedModel = models[0].Name // Use first available model, TODO: change this later to let the user select the model
-		fmt.Printf("✓ Using model: %s\n", selectedModel)
+		ui.PrintColor(ui.BrightGreen, fmt.Sprintf("✓ Using model: %s", selectedModel))
 	}
 
-	fmt.Println()
-	fmt.Println("✓ Setup complete! Maahinen is ready!")
+	ui.PrintColor(ui.BrightGreen, "✓ Setup complete! Maahinen is ready!")
 	return selectedModel, nil
 }
 

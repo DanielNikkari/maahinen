@@ -50,7 +50,7 @@ func (a *Agent) Run() error {
 	fmt.Println()
 
 	for {
-		fmt.Print("You: ")
+		fmt.Print(ui.UserPrompt())
 		input, err := reader.ReadString('\n')
 		if err != nil {
 			return fmt.Errorf("failed to read input: %w", err)
@@ -63,7 +63,8 @@ func (a *Agent) Run() error {
 			continue
 		}
 		if input == "exit" || input == "quit" {
-			fmt.Println("Goodbye!")
+			fmt.Println()
+			ui.TypewriterColored("🧙 Goodbye!", ui.BrightMagenta, 30*time.Millisecond)
 			return nil
 		}
 
@@ -75,7 +76,7 @@ func (a *Agent) Run() error {
 		spinner := ui.NewSpinner("wizard")
 		r := rand.New(rand.NewSource(time.Now().UnixNano()))
 		actionAdj := actionAdjectives[r.Intn(len(actionAdjectives))]
-		spinner.Start(actionAdj)
+		spinner.Start(ui.ActionAdjPrompt(actionAdj))
 
 		resp, err := a.client.Chat(a.messages)
 
@@ -87,7 +88,7 @@ func (a *Agent) Run() error {
 			continue
 		}
 
-		fmt.Printf("Maahinen: %s\n\n", resp.Content)
+		fmt.Printf("%s%s\n\n", ui.AssistantPrompt(), resp.Content)
 
 		a.messages = append(a.messages, *resp)
 	}
