@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"fmt"
 	"os"
-	"strconv"
 	"strings"
 
 	"github.com/DanielNikkari/maahinen/internal/ollama"
@@ -77,42 +76,42 @@ func Run() (string, error) {
 func pickAndPullModel(ollamaURL string) (string, error) {
 	recommended := ollama.GetRecommendedModels()
 
-	fmt.Println()
-	fmt.Println("Select model to download:")
-	fmt.Println()
-
+	options := make([]ui.PickerOption, len(recommended))
 	for i, m := range recommended {
-		fmt.Printf("  %d) %s (%s)\n", i+1, m.Name, m.Size)
-		fmt.Printf("     %s\n", m.Description)
-		fmt.Println()
-	}
-
-	choice := prompt("Enter number (1-%d): ", len(recommended))
-	idx, err := strconv.Atoi(strings.TrimSpace(choice))
-	if err != nil || idx < 1 || idx > len(recommended) {
-		return "", fmt.Errorf("invalid selection")
-	}
-
-	selected := recommended[idx-1]
-	fmt.Printf("\nDownloading %s...\n", selected.Name)
-
-	err = ollama.PullModel(ollamaURL, selected.Name, func(p ollama.PullProgress) {
-		if p.Total > 0 {
-			pct := float64(p.Completed) / float64(p.Total) * 100
-			fmt.Printf("\r  %s: %.1f%%", p.Status, pct)
-		} else if p.Status != "" {
-			fmt.Printf("\r  %s...          ", p.Status)
+		options[i] = ui.PickerOption{
+			Name:        m.Name,
+			Description: m.Description,
+			Extra:       m.Size,
 		}
-	})
-
-	fmt.Println()
-
-	if err != nil {
-		return "", fmt.Errorf("failed to pull model: %w", err)
 	}
 
-	fmt.Printf("✓ %s downloaded successfully!\n", selected.Name)
-	return selected.Name, nil
+	for {
+		selected, err := ui.PickModel(options)
+		if err != nil {
+			return "", err
+		}
+
+		fmt.Printf("\n%s Downloading %s...\n", ui.Color(ui.Yellow, "⚡"), selected)
+
+		err = ollama.PullModel(ollamaURL, selected, func(p ollama.PullProgress) {
+			if p.Total > 0 {
+				pct := float64(p.Completed) / float64(p.Total) * 100
+				fmt.Printf("\r   %s: %.1f%%", p.Status, pct)
+			} else if p.Status != "" {
+				fmt.Printf("\r   %s...          ", p.Status)
+			}
+		})
+
+		fmt.Println()
+
+		if err != nil {
+			fmt.Printf("%s Model '%s' not found. Please try again.\n\n", ui.Color(ui.Red, "✗"), selected)
+			continue
+		}
+
+		fmt.Println(ui.Color(ui.BrightGreen, fmt.Sprintf("✓ %s downloaded successfully!", selected)))
+		return selected, nil
+	}
 }
 
 func confirm(question string) bool {
@@ -121,11 +120,4 @@ func confirm(question string) bool {
 	answer, _ := reader.ReadString('\n')
 	answer = strings.TrimSpace(strings.ToLower(answer))
 	return answer == "y" || answer == "yes"
-}
-
-func prompt(format string, args ...any) string {
-	fmt.Printf(format, args...)
-	reader := bufio.NewReader(os.Stdin)
-	answer, _ := reader.ReadString('\n')
-	return strings.TrimSpace(answer)
 }

@@ -52,3 +52,8 @@ docker compose down
 ```bash
 docker compose down -v
 ```
+
+### Remove orphans without affecting running services
+```bash
+docker container prune
+```
