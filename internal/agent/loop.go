@@ -40,24 +40,10 @@ func NewAgent(client *llm.Client, registry *tools.Registry) *Agent {
 		messages: []llm.Message{
 			{
 				Role: llm.RoleSystem,
-				Content: `You are Maahinen, a helpful coding assistant.
-
-IMPORTANT RULES FOR TOOL USAGE:
-- Only use the bash tool when the use of the tool is actually needed to complete the request.
-- For greetings, questions, explanations, or conversation, just respond with text. Do NOT use tools.
-- When in doubt, respond with text first and ask if the user wants you to run a command.
-
-Examples of when NOT to use tools:
-- "Hello" → Just say your greetings back
-- "How do I write a for loop?" → Explain with text
-- "What is Go?" → Explain with text
-
-Examples of when to use tools:
-- "List files in this directory" → Use bash: ls
-- "What's my Go version?" → Use bash: go version
-- "Create a file called test.txt" → Use bash: echo "content" > test.txt
-
-Be concise and practical.`,
+				Content: `You are Maahinen, a helpful coding assistant. You help users with programming tasks, 
+				answer questions about code, and assist with debugging. Be concise and practical.
+				You should aim to take action, for example, when user asks you for example write code
+				you should utilize your tools to complete the user request.`,
 			},
 		},
 	}
@@ -67,7 +53,7 @@ func (a *Agent) Run() error {
 	reader := bufio.NewReader(os.Stdin)
 
 	fmt.Println()
-	fmt.Printf("🧙 Maahinen (%s)\n", a.client.Model())
+	fmt.Printf("🧙 %s (%s)\n", ui.Color(ui.BrightMagenta, "Maahinen"), a.client.Model())
 	fmt.Println("Type 'exit' or 'quit' to end the session.")
 	fmt.Println(strings.Repeat("-", 40))
 	fmt.Println()
@@ -87,8 +73,12 @@ func (a *Agent) Run() error {
 		}
 		if input == "exit" || input == "quit" {
 			fmt.Println()
-			ui.TypewriterColored("🧙 Goodbye!", ui.BrightMagenta, 30*time.Millisecond)
+			ui.PrintColor(ui.BrightMagenta, "🧙 Goodbye!")
 			return nil
+		}
+
+		if a.handleCommand(input) {
+			continue
 		}
 
 		a.messages = append(a.messages, llm.Message{
@@ -120,6 +110,7 @@ func (a *Agent) processResponse() error {
 
 		a.messages = append(a.messages, *resp)
 
+		// Check for native tool calls
 		if resp.HasToolCalls() {
 			for _, tc := range resp.ToolCalls {
 				if err := a.executeTool(tc); err != nil {
@@ -129,6 +120,15 @@ func (a *Agent) processResponse() error {
 			continue
 		}
 
+		// Check for JSON tool calls
+		if tc, ok := llm.ParseToolCallFromContent(resp.Content); ok {
+			if err := a.executeTool(*tc); err != nil {
+				return err
+			}
+			continue
+		}
+
+		// Regular text response
 		if resp.Content != "" {
 			fmt.Printf("%s%s\n\n", ui.AssistantPrompt(), resp.Content)
 		}
@@ -162,10 +162,17 @@ func (a *Agent) executeTool(tc llm.ToolCall) error {
 	}
 	fmt.Println()
 
+	toolOutput := result.Output
+	if toolOutput == "" && result.Success {
+		toolOutput = "Command executed successfully (no output)"
+	} else if !result.Success {
+		toolOutput = fmt.Sprintf("Command failed: %s\nOutput: %s", result.Error, result.Output)
+	}
+
 	// Add tool result to messages
 	a.messages = append(a.messages, llm.Message{
 		Role:    llm.RoleTool,
-		Content: result.Output,
+		Content: toolOutput,
 	})
 
 	return nil

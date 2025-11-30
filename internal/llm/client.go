@@ -76,3 +76,7 @@ func (c *Client) Model() string {
 func (c *Client) SetModel(model string) {
 	c.model = model
 }
+
+func (c *Client) BaseURL() string {
+	return c.baseURL
+}
