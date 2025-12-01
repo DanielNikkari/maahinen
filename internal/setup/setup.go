@@ -13,10 +13,6 @@ import (
 const defaultURL = "http://localhost:11434"
 
 func Run() (string, error) {
-	fmt.Println("🧙 Maahinen Setup")
-	fmt.Println("=================")
-	fmt.Println()
-
 	var selectedModel string
 
 	ollamaURL := os.Getenv("OLLAMA_URL")

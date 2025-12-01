@@ -2,6 +2,7 @@ package agent
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/DanielNikkari/maahinen/internal/ollama"
@@ -21,6 +22,9 @@ func (a *Agent) handleCommand(input string) bool {
 	switch parts[1] {
 	case "model":
 		a.handleModelCommand(parts[2:])
+		return true
+	case "spinner":
+		a.handleSpinnerCommand(parts[2:])
 		return true
 	case "help":
 		a.handleHelpCommand()
@@ -98,11 +102,43 @@ func (a *Agent) selectOrInstallModel(modelName, ollamaURL string) {
 	fmt.Printf("%s Downloaded and switched to: %s\n\n", ui.Color(ui.BrightGreen, "✓"), modelName)
 }
 
+func (a *Agent) handleSpinnerCommand(args []string) {
+	if len(args) == 0 {
+		fmt.Printf("%s Current spinner: %s\n\n", ui.Color(ui.Cyan, "♻️"), a.spinner)
+		return
+	}
+
+	switch args[0] {
+	case "list":
+		spinners := ui.ListSpinners()
+		fmt.Printf("%s Available spinners:\n", "♻️")
+		for _, spinner := range spinners {
+			if spinner == a.spinner {
+				fmt.Printf("   %s %s (current)\n", ui.Color(ui.BrightGreen, "●"), spinner)
+			} else {
+				fmt.Printf("   %s %s\n", ui.Color(ui.Dim, "○"), spinner)
+			}
+		}
+		fmt.Println()
+	default:
+		spinners := ui.ListSpinners()
+		if !slices.Contains(spinners, args[0]) {
+			fmt.Printf("%s No spinner available by name: %s\n\n", ui.Color(ui.Red, "✗"), args[0])
+			break
+		}
+		a.spinner = args[0]
+		fmt.Printf("%s Switch to spinner: %s\n\n", ui.Color(ui.BrightGreen, "✓"), a.spinner)
+	}
+}
+
 func (a *Agent) handleHelpCommand() {
 	fmt.Println(ui.Color(ui.Cyan, "Available commands:"))
 	fmt.Println("   /model           Show current model")
 	fmt.Println("   /model/list      List installed models")
 	fmt.Println("   /model/{name}    Switch to or install a model, e.g., `/model/qwen2.5-coder:7b`")
+	fmt.Println("   /spinner         Show current spinner")
+	fmt.Println("   /spinner/list    List available spinners")
+	fmt.Println("   /spinner/{name}  Switch to spinner")
 	fmt.Println("   /help            Show this help")
 	fmt.Println("   exit, quit       Exit Maahinen")
 	fmt.Println()

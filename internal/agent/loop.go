@@ -29,14 +29,19 @@ type Agent struct {
 	client   *llm.Client
 	messages []llm.Message
 	tools    *tools.Registry
+	spinner  string
 }
 
 func NewAgent(client *llm.Client, registry *tools.Registry) *Agent {
-	client.RegisterTool(llm.BashToolDefinition())
+	// Register tools in registry
+	for _, tool := range registry.All() {
+		client.RegisterTool(tool.Definition())
+	}
 
 	return &Agent{
-		client: client,
-		tools:  registry,
+		client:  client,
+		tools:   registry,
+		spinner: "wizard",
 		messages: []llm.Message{
 			{
 				Role: llm.RoleSystem,
@@ -53,7 +58,7 @@ func (a *Agent) Run() error {
 	reader := bufio.NewReader(os.Stdin)
 
 	fmt.Println()
-	fmt.Printf("🧙 %s (%s)\n", ui.Color(ui.BrightMagenta, "Maahinen"), a.client.Model())
+	fmt.Printf("🔮 %s (%s)\n", ui.Color(ui.BrightMagenta, "Maahinen"), a.client.Model())
 	fmt.Println("Type 'exit' or 'quit' to end the session.")
 	fmt.Println(strings.Repeat("-", 40))
 	fmt.Println()
@@ -95,7 +100,7 @@ func (a *Agent) Run() error {
 
 func (a *Agent) processResponse() error {
 	for {
-		spinner := ui.NewSpinner("wizard")
+		spinner := ui.NewSpinner(a.spinner)
 		r := rand.New(rand.NewSource(time.Now().UnixNano()))
 		actionAdj := actionAdjectives[r.Intn(len(actionAdjectives))]
 		spinner.Start(ui.ActionAdjPrompt(actionAdj))
@@ -121,7 +126,7 @@ func (a *Agent) processResponse() error {
 		}
 
 		// Check for JSON tool calls
-		if tc, ok := llm.ParseToolCallFromContent(resp.Content); ok {
+		if tc, ok := tools.ParseToolCallFromContent(resp.Content); ok {
 			if err := a.executeTool(*tc); err != nil {
 				return err
 			}
@@ -137,15 +142,38 @@ func (a *Agent) processResponse() error {
 }
 
 func (a *Agent) executeTool(tc llm.ToolCall) error {
-	tool, ok := a.tools.Get(tc.Function.Name)
-	if !ok {
-		return fmt.Errorf("unknown tool: %s", tc.Function.Name)
+	toolName := tc.Function.Name
+
+	// Map common tool name mistakes
+	switch toolName {
+	case "go", "python", "shell", "sh", "cmd", "command", "terminal":
+		toolName = "bash"
+	case "file_read", "read_file":
+		toolName = "read"
+	case "file_write", "write_file", "create_file":
+		toolName = "write"
+	case "file_edit", "edit_file":
+		toolName = "edit"
+	case "file_list", "list_files", "ls", "dir":
+		toolName = "list"
 	}
 
-	fmt.Printf("%s Running: %s\n", ui.Color(ui.Yellow, "⚡"), tc.Function.Name)
-	if cmd, ok := tc.Function.Arguments["command"].(string); ok {
-		fmt.Printf("   %s\n", ui.Color(ui.Dim, cmd))
+	tool, ok := a.tools.Get(toolName)
+	if !ok {
+		availableTools := strings.Join(a.tools.List(), ", ")
+		errMsg := fmt.Sprintf("Unknown tool '%s'. Available tools: %s", tc.Function.Name, availableTools)
+
+		fmt.Printf("%s%s %s%s\n\n", ui.Indent, ui.Color(ui.Yellow, "⚠"), "Unknown tool ", tc.Function.Name)
+
+		a.messages = append(a.messages, llm.Message{
+			Role:    llm.RoleTool,
+			Content: errMsg,
+		})
+		return nil
 	}
+
+	argsStr := formatArgs(tc.Function.Arguments)
+	fmt.Printf("%s%s%s(%s)\n", ui.Indent, ui.Color(ui.Yellow, "⚡"), ui.Color(ui.Yellow, toolName), argsStr)
 
 	result, err := tool.Execute(context.Background(), tc.Function.Arguments)
 	if err != nil {
@@ -153,12 +181,12 @@ func (a *Agent) executeTool(tc llm.ToolCall) error {
 	}
 
 	if result.Success {
-		fmt.Printf("%s\n", ui.Color(ui.BrightGreen, "✓ Success"))
+		fmt.Printf("%s%s\n", ui.Indent, ui.Color(ui.BrightGreen, "✓ Success"))
 	} else {
-		fmt.Printf("%s %s\n", ui.Color(ui.Red, "✗ Failed:"), result.Error)
+		fmt.Printf("%s%s %s\n", ui.Indent, ui.Color(ui.Red, "✗ Failed:"), result.Error)
 	}
 	if result.Output != "" {
-		fmt.Printf("%s\n", result.Output)
+		fmt.Printf("%s\n", ui.Indented(ui.Indented(result.Output)))
 	}
 	fmt.Println()
 
@@ -176,4 +204,21 @@ func (a *Agent) executeTool(tc llm.ToolCall) error {
 	})
 
 	return nil
+}
+
+func formatArgs(args map[string]any) string {
+	if len(args) == 0 {
+		return ""
+	}
+
+	var parts []string
+	for key, value := range args {
+		strVal := fmt.Sprintf("%v", value)
+		if len(strVal) > 50 {
+			strVal = strVal[:47] + "..."
+		}
+		parts = append(parts, fmt.Sprintf("%s=%q", key, strVal))
+	}
+
+	return strings.Join(parts, ", ")
 }

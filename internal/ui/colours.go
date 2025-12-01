@@ -1,6 +1,11 @@
 package ui
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
+
+const Indent = "    "
 
 // ANSI color codes
 const (
@@ -39,11 +44,11 @@ func BoldText(text string) string {
 }
 
 func UserPrompt() string {
-	return Color(BrightCyan, "You: ")
+	return Color(BrightCyan, "> ")
 }
 
 func AssistantPrompt() string {
-	return Color(BrightMagenta, "Maahinen: ")
+	return Color(BrightMagenta, "Maahinen:\n")
 }
 
 func ActionAdjPrompt(actionAdj string) string {
@@ -52,4 +57,16 @@ func ActionAdjPrompt(actionAdj string) string {
 
 func PrintError(err error) {
 	fmt.Println(Color(Red, fmt.Sprintf("Error: %v", err)))
+}
+
+func Indented(text string) string {
+	lines := strings.Split(text, "\n")
+	for i, line := range lines {
+		lines[i] = Indent + line
+	}
+	return strings.Join(lines, "\n")
+}
+
+func PrintIndented(text string) {
+	fmt.Println(Indented(text))
 }
