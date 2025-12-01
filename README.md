@@ -24,7 +24,7 @@ Maahinen is a playful CLI agentic coding assistant tool running on local LLMs th
 ## Installation
 
 ```bash
-go install github.com/DanielNikkari/cmd/maahinen@latest
+go install github.com/DanielNikkari/maahinen/cmd/maahinen@latest
 ```
 
 This installs the `maahinen` binary to your `$GOPATH/bin`.
