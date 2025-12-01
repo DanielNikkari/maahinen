@@ -1,10 +1,15 @@
 package tools
 
-import "context"
+import (
+	"context"
+
+	"github.com/DanielNikkari/maahinen/internal/llm"
+)
 
 type Tool interface {
 	Name() string
 	Description() string
+	Definition() llm.Tool
 	Execute(ctx context.Context, args map[string]any) (Result, error)
 }
 

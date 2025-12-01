@@ -6,20 +6,22 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/DanielNikkari/maahinen/internal/llm"
 )
 
-type FileReadTool struct {
+type ReadTool struct {
 	workDir string
 }
 
-func NewFileReadTool(workDir string) *FileReadTool {
-	return &FileReadTool{workDir: workDir}
+func NewReadTool(workDir string) *ReadTool {
+	return &ReadTool{workDir: workDir}
 }
 
-func (t *FileReadTool) Name() string        { return "file_read" }
-func (t *FileReadTool) Description() string { return "Read the contents of a file" }
+func (t *ReadTool) Name() string        { return "read" }
+func (t *ReadTool) Description() string { return "Read the contents of a file" }
 
-func (t *FileReadTool) Execute(ctc context.Context, args map[string]any) (Result, error) {
+func (t *ReadTool) Execute(ctx context.Context, args map[string]any) (Result, error) {
 	path, ok := args["path"].(string)
 	if !ok || path == "" {
 		return Result{Success: false, Error: "missing 'path' argument"}, nil
@@ -37,18 +39,38 @@ func (t *FileReadTool) Execute(ctc context.Context, args map[string]any) (Result
 	return Result{Success: true, Output: string(content)}, nil
 }
 
-type FileWriteTool struct {
+func ReadToolDefinition() llm.Tool {
+	return llm.Tool{
+		Type: "function",
+		Function: llm.ToolDefinition{
+			Name:        "read",
+			Description: "Read the contents of a file",
+			Parameters: llm.Parameters{
+				Type: "object",
+				Properties: map[string]llm.Property{
+					"path": {
+						Type:        "string",
+						Description: "Path to the file to read",
+					},
+				},
+				Required: []string{"path"},
+			},
+		},
+	}
+}
+
+type WriteTool struct {
 	workDir string
 }
 
-func NewFileWriteTool(workDir string) *FileWriteTool {
-	return &FileWriteTool{workDir: workDir}
+func NewWriteTool(workDir string) *WriteTool {
+	return &WriteTool{workDir: workDir}
 }
 
-func (t *FileWriteTool) Name() string        { return "file_write" }
-func (t *FileWriteTool) Description() string { return "Create or overwrite a file with content" }
+func (t *WriteTool) Name() string        { return "write" }
+func (t *WriteTool) Description() string { return "Create or overwrite a file with content" }
 
-func (t *FileWriteTool) Execute(ctx context.Context, args map[string]any) (Result, error) {
+func (t *WriteTool) Execute(ctx context.Context, args map[string]any) (Result, error) {
 	path, ok := args["path"].(string)
 	if !ok || path == "" {
 		return Result{Success: false, Error: "missing 'path' argument"}, nil
@@ -75,18 +97,42 @@ func (t *FileWriteTool) Execute(ctx context.Context, args map[string]any) (Resul
 	return Result{Success: true, Output: fmt.Sprintf("File written: %s", path)}, nil
 }
 
-type FileEditTool struct {
+func WriteToolDefinition() llm.Tool {
+	return llm.Tool{
+		Type: "function",
+		Function: llm.ToolDefinition{
+			Name:        "write",
+			Description: "Create or overwrite a file with content",
+			Parameters: llm.Parameters{
+				Type: "object",
+				Properties: map[string]llm.Property{
+					"path": {
+						Type:        "string",
+						Description: "Path to the file to write",
+					},
+					"content": {
+						Type:        "string",
+						Description: "Content to write to the file",
+					},
+				},
+				Required: []string{"path", "content"},
+			},
+		},
+	}
+}
+
+type EditTool struct {
 	workDir string
 }
 
-func NewFileEditTool(workDir string) *FileEditTool {
-	return &FileEditTool{workDir: workDir}
+func NewEditTool(workDir string) *EditTool {
+	return &EditTool{workDir: workDir}
 }
 
-func (t *FileEditTool) Name() string        { return "file_edit" }
-func (t *FileEditTool) Description() string { return "Edit a file by replacing a specific string" }
+func (t *EditTool) Name() string        { return "edit" }
+func (t *EditTool) Description() string { return "Edit a file by replacing a specific string" }
 
-func (t *FileEditTool) Execute(ctx context.Context, args map[string]any) (Result, error) {
+func (t *EditTool) Execute(ctx context.Context, args map[string]any) (Result, error) {
 	path, ok := args["path"].(string)
 	if !ok || path == "" {
 		return Result{Success: false, Error: "missing 'path' argument"}, nil
@@ -123,18 +169,46 @@ func (t *FileEditTool) Execute(ctx context.Context, args map[string]any) (Result
 	return Result{Success: true, Output: fmt.Sprintf("File edited: %s", path)}, nil
 }
 
-type FileListTool struct {
+func EditToolDefinition() llm.Tool {
+	return llm.Tool{
+		Type: "function",
+		Function: llm.ToolDefinition{
+			Name:        "edit",
+			Description: "Edit a file by finding and replacing a specific string",
+			Parameters: llm.Parameters{
+				Type: "object",
+				Properties: map[string]llm.Property{
+					"path": {
+						Type:        "string",
+						Description: "Path to the file to edit",
+					},
+					"old_string": {
+						Type:        "string",
+						Description: "The exact string to find and replace",
+					},
+					"new_string": {
+						Type:        "string",
+						Description: "The string to replace it with (empty to delete)",
+					},
+				},
+				Required: []string{"path", "old_string", "new_string"},
+			},
+		},
+	}
+}
+
+type ListTool struct {
 	workDir string
 }
 
-func NewFileListTool(workDir string) *FileListTool {
-	return &FileListTool{workDir: workDir}
+func NewListTool(workDir string) *ListTool {
+	return &ListTool{workDir: workDir}
 }
 
-func (t *FileListTool) Name() string        { return "file_list" }
-func (t *FileListTool) Description() string { return "List files and directories in a path" }
+func (t *ListTool) Name() string        { return "list" }
+func (t *ListTool) Description() string { return "List files and directories in a path" }
 
-func (t *FileListTool) Execute(ctx context.Context, args map[string]any) (Result, error) {
+func (t *ListTool) Execute(ctx context.Context, args map[string]any) (Result, error) {
 	path, ok := args["path"].(string)
 	if !ok || path == "" {
 		path = "."
@@ -164,4 +238,40 @@ func (t *FileListTool) Execute(ctx context.Context, args map[string]any) (Result
 	}
 
 	return Result{Success: true, Output: strings.Join(lines, "\n")}, nil
+}
+
+func ListToolDefinition() llm.Tool {
+	return llm.Tool{
+		Type: "function",
+		Function: llm.ToolDefinition{
+			Name:        "list",
+			Description: "List files and directories in a path",
+			Parameters: llm.Parameters{
+				Type: "object",
+				Properties: map[string]llm.Property{
+					"path": {
+						Type:        "string",
+						Description: "Path to the directory to list (defaults to current directory)",
+					},
+				},
+				Required: []string{},
+			},
+		},
+	}
+}
+
+func (t *ReadTool) Definition() llm.Tool {
+	return ReadToolDefinition()
+}
+
+func (t *WriteTool) Definition() llm.Tool {
+	return WriteToolDefinition()
+}
+
+func (t *EditTool) Definition() llm.Tool {
+	return EditToolDefinition()
+}
+
+func (t *ListTool) Definition() llm.Tool {
+	return ListToolDefinition()
 }

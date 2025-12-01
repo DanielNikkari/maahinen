@@ -6,6 +6,8 @@ import (
 	"os/exec"
 	"strings"
 	"time"
+
+	"github.com/DanielNikkari/maahinen/internal/llm"
 )
 
 type BashTool struct {
@@ -89,4 +91,28 @@ func (b *BashTool) SetTimeout(d time.Duration) {
 
 func (b *BashTool) SetWorkDir(dir string) {
 	b.workDir = dir
+}
+
+func BashToolDefinition() llm.Tool {
+	return llm.Tool{
+		Type: "function",
+		Function: llm.ToolDefinition{
+			Name:        "bash",
+			Description: "Execute a bash command on the system. Use this to run shell commands, check files, install packages, etc.",
+			Parameters: llm.Parameters{
+				Type: "object",
+				Properties: map[string]llm.Property{
+					"command": {
+						Type:        "string",
+						Description: "The bash command to execute",
+					},
+				},
+				Required: []string{"command"},
+			},
+		},
+	}
+}
+
+func (b *BashTool) Definition() llm.Tool {
+	return BashToolDefinition()
 }
