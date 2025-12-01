@@ -2,9 +2,20 @@ package ui
 
 import (
 	"fmt"
+	"sort"
 	"sync"
 	"time"
 )
+
+var Spinners = map[string][]string{
+	"dots":     {"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"},
+	"wizard":   {"🧙", "🧙‍♂️", "✨", "🪄", "✨", "🧙‍♂️"},
+	"moon":     {"🌑", "🌒", "🌓", "🌔", "🌕", "🌖", "🌗", "🌘"},
+	"bounce":   {"⠁", "⠂", "⠄", "⠂"},
+	"arrows":   {"←", "↖", "↑", "↗", "→", "↘", "↓", "↙"},
+	"thinking": {"🤔", "💭", "🧠", "💡", "🧠", "💭"},
+	"classic":  {"|", "/", "-", "\\"},
+}
 
 type Spinner struct {
 	frames   []string
@@ -23,22 +34,10 @@ func NewSpinner(style string) *Spinner {
 }
 
 func getFrames(style string) []string {
-	switch style {
-	case "dots":
-		return []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
-	case "wizard":
-		return []string{"🧙", "🧙‍♂️", "✨", "🪄", "✨", "🧙‍♂️"}
-	case "moon":
-		return []string{"🌑", "🌒", "🌓", "🌔", "🌕", "🌖", "🌗", "🌘"}
-	case "bounce":
-		return []string{"⠁", "⠂", "⠄", "⠂"}
-	case "arrows":
-		return []string{"←", "↖", "↑", "↗", "→", "↘", "↓", "↙"}
-	case "thinking":
-		return []string{"🤔", "💭", "🧠", "💡", "🧠", "💭"}
-	default: // classic
-		return []string{"|", "/", "-", "\\"}
+	if frames, ok := Spinners[style]; ok {
+		return frames
 	}
+	return Spinners["dots"]
 }
 
 func (s *Spinner) Start(message string) {
@@ -63,4 +62,13 @@ func (s *Spinner) Start(message string) {
 func (s *Spinner) Stop() {
 	close(s.stop)
 	s.wg.Wait()
+}
+
+func ListSpinners() []string {
+	spinners := make([]string, 0, len(Spinners))
+	for name := range Spinners {
+		spinners = append(spinners, name)
+	}
+	sort.Strings(spinners)
+	return spinners
 }
