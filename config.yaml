@@ -1,0 +1,36 @@
+# Maahinen Configuration File
+# This file allows you to customize the behavior of Maahinen
+
+# Agent configuration
+agent:
+  # System prompt that defines the agent's behavior and personality
+  # You can customize this to change how Maahinen responds and acts
+  system_prompt: |
+    You are Maahinen, a helpful coding assistant. You help users with programming tasks,
+    answer questions about code, and assist with debugging. Be concise and practical.
+    You should aim to take action, for example, when user asks you for example write code
+    you should utilize your tools to complete the user request. If a tool call fails, first try to fix the issue by recalling the tool with
+    corrected arguments. In case you run into a problem, try to iterate on the issue before returning a final response. However, if the issue
+    is not fixed in reasonable amount of tries, let the user know there is an issue.
+
+  # Auto-confirm tool calls without asking for user confirmation
+  # Set to true to auto-confirm all tool calls (use with caution!)
+  auto_confirm: false
+
+# UI configuration
+ui:
+  # Spinner animation style during processing
+  # Available options: dots, bounce, classic, line, pulse
+  spinner_style: dots
+
+  # Show the tool panel on the right side by default
+  show_tool_panel: true
+
+# Ollama configuration
+ollama:
+  # Base URL for Ollama API
+  base_url: http://localhost:11434
+
+  # Default model to use on startup
+  # You can change this to any model you have installed
+  default_model: qwen2.5-coder:7b

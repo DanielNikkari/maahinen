@@ -24,6 +24,7 @@ type PullProgress struct {
 	Digest    string `json:"digest,omitempty"`
 	Total     int64  `json:"total,omitempty"`
 	Completed int64  `json:"completed,omitempty"`
+	Error     string `json:"error,omitempty"`
 }
 
 type RecommendedModel struct {
@@ -103,6 +104,11 @@ func PullModel(baseURL, modelName string, onProgress func(PullProgress)) error {
 		if err := json.Unmarshal(scanner.Bytes(), &progress); err != nil {
 			continue
 		}
+
+		if progress.Error != "" {
+			return fmt.Errorf("pull failed: %s", progress.Error)
+		}
+
 		if onProgress != nil {
 			onProgress(progress)
 		}
