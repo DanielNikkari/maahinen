@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/DanielNikkari/maahinen/internal/config"
 	"github.com/DanielNikkari/maahinen/internal/llm"
 	"github.com/DanielNikkari/maahinen/internal/ollama"
 	"github.com/DanielNikkari/maahinen/internal/tools"
@@ -44,7 +45,7 @@ type TUIAgent struct {
 }
 
 // NewTUIAgent creates a new TUI-integrated agent
-func NewTUIAgent(client *llm.Client, registry *tools.Registry) *TUIAgent {
+func NewTUIAgent(client *llm.Client, registry *tools.Registry, cfg *config.Config) *TUIAgent {
 	// Register tools in registry
 	for _, tool := range registry.All() {
 		client.RegisterTool(tool.Definition())
@@ -62,20 +63,27 @@ func NewTUIAgent(client *llm.Client, registry *tools.Registry) *TUIAgent {
 		log.Printf("Warning: could not open tool log file: %v", err)
 	}
 
+	// Use config values or defaults
+	systemPrompt := cfg.Agent.SystemPrompt
+	if systemPrompt == "" {
+		systemPrompt = config.DefaultConfig().Agent.SystemPrompt
+	}
+
+	spinnerStyle := cfg.UI.SpinnerStyle
+	if spinnerStyle == "" {
+		spinnerStyle = "dots"
+	}
+
 	return &TUIAgent{
 		client:       client,
 		tools:        registry,
 		logFile:      logFile,
-		autoConfirm:  false, // Default to confirm tools for safety
-		spinnerStyle: "dots",
+		autoConfirm:  cfg.Agent.AutoConfirm,
+		spinnerStyle: spinnerStyle,
 		messages: []llm.Message{
 			{
-				Role: llm.RoleSystem,
-				Content: `You are Maahinen, a helpful coding assistant. You help users with programming tasks,
-answer questions about code, and assist with debugging. Be concise and practical.
-You should aim to take action, for example, when user asks you for example write code
-you should utilize your tools to complete the user request. If a tool call fails, first try to fix the issue by recalling the tool with 
-corrected arguments.`,
+				Role:    llm.RoleSystem,
+				Content: systemPrompt,
 			},
 		},
 	}

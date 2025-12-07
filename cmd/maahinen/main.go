@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/DanielNikkari/maahinen/internal/config"
 	"github.com/DanielNikkari/maahinen/internal/llm"
 	"github.com/DanielNikkari/maahinen/internal/setup"
 	"github.com/DanielNikkari/maahinen/internal/tools"
@@ -14,20 +15,36 @@ import (
 )
 
 func main() {
+	// Load configuration
+	cfg, err := config.Load("")
+	if err != nil {
+		fmt.Fprintln(os.Stderr, ui.Color(ui.Red, fmt.Sprintf("Error loading config: %v", err)))
+		os.Exit(1)
+	}
+
 	selectedModel, err := setup.Run()
 	if err != nil {
 		fmt.Fprintln(os.Stderr, ui.Color(ui.Red, fmt.Sprintf("Error: %v", err)))
 		os.Exit(1)
 	}
 
-	// Get Ollama URL from env or use default
+	// Get Ollama URL from env, config, or use default
 	ollamaURL := os.Getenv("OLLAMA_URL")
+	if ollamaURL == "" {
+		ollamaURL = cfg.Ollama.BaseURL
+	}
 	if ollamaURL == "" {
 		ollamaURL = "http://localhost:11434"
 	}
 
+	// Use selected model from setup, or fall back to config default
+	modelToUse := selectedModel
+	if modelToUse == "" {
+		modelToUse = cfg.Ollama.DefaultModel
+	}
+
 	// Create LLM client
-	client := llm.NewClient(ollamaURL, selectedModel)
+	client := llm.NewClient(ollamaURL, modelToUse)
 
 	// Create tool registry
 	registry := tools.NewRegistry()
@@ -48,8 +65,8 @@ func main() {
 		defer f.Close()
 	}
 
-	// Create the TUI agent
-	agent := tui.NewTUIAgent(client, registry)
+	// Create the TUI agent with config
+	agent := tui.NewTUIAgent(client, registry, cfg)
 	defer agent.Close()
 
 	// Create the TUI program and model
@@ -58,6 +75,10 @@ func main() {
 		fmt.Fprintln(os.Stderr, ui.Color(ui.Red, fmt.Sprintf("Error creating TUI: %v", err)))
 		os.Exit(1)
 	}
+
+	// Apply UI config settings
+	model.SetSpinnerStyle(cfg.UI.SpinnerStyle)
+	model.SetAutoConfirmTools(cfg.Agent.AutoConfirm)
 
 	// Connect agent to the TUI
 	agent.SetProgram(program, model)

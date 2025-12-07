@@ -14,9 +14,9 @@ import (
 
 const (
 	minInputHeight     = 1
-	maxInputHeight     = 4
+	maxInputHeight     = 10
 	toolPanelWidth     = 40
-	commandMenuMaxShow = 6
+	commandMenuMaxShow = 7
 )
 
 // Message types for TUI communication
@@ -97,6 +97,7 @@ var availableCommands = []Command{
 	{Name: "/spinner", Description: "Show current spinner", HasSubcmds: true},
 	{Name: "/spinner/list", Description: "List available spinners", HasSubcmds: false},
 	{Name: "/prune", Description: "Clear message history", HasSubcmds: false},
+	{Name: "/autoconfirm", Description: "Toggle tool auto-confirm on/off.", HasSubcmds: false},
 	{Name: "/help", Description: "Show available commands", HasSubcmds: false},
 }
 
@@ -323,7 +324,10 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case ToolResultMsg:
 		m.handleToolResult(msg)
-		return m, nil
+		m.isProcessing = true
+		m.spinnerIndex = 0
+		m.renderMessages()
+		return m, tickSpinner()
 
 	case ToolCancelledMsg:
 		// Add cancelled tool to the panel
@@ -615,16 +619,48 @@ func (m *Model) updateLayout() {
 }
 
 func (m *Model) updateInputHeight() {
-	lines := strings.Count(m.chatInput.Value(), "\n") + 1
+	// Use the textarea's own line count which accounts for wrapping
+	lines := m.chatInput.LineCount()
+	if lines == 0 {
+		lines = 1
+	}
+
 	newHeight := min(max(lines, minInputHeight), maxInputHeight)
-	if newHeight != m.chatInput.Height() {
+	oldHeight := m.chatInput.Height()
+
+	if newHeight != oldHeight {
+		// Get current cursor position info
+		currentLine := m.chatInput.Line()
+		currentValue := m.chatInput.Value()
+
+		// Set new height
 		m.chatInput.SetHeight(newHeight)
+
+		// If we're expanding and have multiple lines, reset viewport to show all content
+		if newHeight > oldHeight && lines > 1 {
+			// Move cursor to start to reset viewport, then restore position
+			m.chatInput.CursorStart()
+
+			// If we weren't on the first line, move back toward original position
+			// by moving down to the original line
+			for i := 0; i < currentLine && i < lines-1; i++ {
+				m.chatInput.CursorDown()
+			}
+
+			// Set cursor to end of value to ensure we're at the typing position
+			m.chatInput.SetValue(currentValue)
+			m.chatInput.CursorEnd()
+		}
+
 		m.updateLayout()
 	}
 }
 
 func (m *Model) getInputHeight() int {
-	lines := strings.Count(m.chatInput.Value(), "\n") + 1
+	lines := m.chatInput.LineCount()
+	if lines == 0 {
+		lines = 1
+	}
 	return min(max(lines, minInputHeight), maxInputHeight)
 }
 
@@ -655,6 +691,9 @@ func (m *Model) filterCommands(prefix string) {
 }
 
 func (m *Model) addMessage(role, content string) {
+	if role == "assistant" {
+		content = "\n" + content
+	}
 	m.messages = append(m.messages, ChatMessage{
 		Role:    role,
 		Content: content,
@@ -672,11 +711,19 @@ func (m *Model) updateStreamingMessage() {
 func (m *Model) renderMessages() {
 	var sb strings.Builder
 
+	// Calculate available width for message content
+	contentWidth := m.messageViewport.Width
+	if contentWidth <= 0 {
+		contentWidth = 80 // Default fallback
+	}
+
 	for _, msg := range m.messages {
 		switch msg.Role {
 		case "user":
 			sb.WriteString(UserLabelStyle.Render("You") + "\n")
-			sb.WriteString(UserMessageStyle.Render(msg.Content) + "\n\n")
+			// Apply width constraint to enable word wrapping
+			userMsgStyled := UserMessageStyle.Width(contentWidth).Render(msg.Content)
+			sb.WriteString(userMsgStyled + "\n\n")
 		case "assistant":
 			sb.WriteString(AssistantLabelStyle.Render("Maahinen") + "\n")
 			// Render markdown
@@ -685,24 +732,24 @@ func (m *Model) renderMessages() {
 				if err == nil {
 					sb.WriteString(rendered)
 				} else {
-					sb.WriteString(AssistantMessageStyle.Render(msg.Content) + "\n")
+					sb.WriteString(AssistantMessageStyle.Width(contentWidth).Render(msg.Content) + "\n")
 				}
 			} else {
-				sb.WriteString(AssistantMessageStyle.Render(msg.Content) + "\n")
+				sb.WriteString(AssistantMessageStyle.Width(contentWidth).Render(msg.Content) + "\n")
 			}
 			sb.WriteString("\n")
 		case "system":
-			sb.WriteString(SystemMessageStyle.Render(msg.Content) + "\n\n")
+			sb.WriteString(SystemMessageStyle.Width(contentWidth).Render(msg.Content) + "\n\n")
 		case "tool":
-			sb.WriteString(ToolMessageStyle.Render(msg.Content) + "\n\n")
+			sb.WriteString(ToolMessageStyle.Width(contentWidth).Render(msg.Content) + "\n\n")
 		case "toolcall":
-			// Show tool calls as one-liners with yellow ⚡ prefix
+			// Show tool calls as one-liners
 			sb.WriteString(ToolCallPrefixStyle.Render("⚡") + " " + ToolCallOneLineStyle.Render(msg.Content) + "\n")
 		case "toolcall_failed":
-			// Show failed tool calls in red with ⚡ prefix
+			// Show failed tool calls in red
 			sb.WriteString(ToolCallPrefixStyle.Render("⚡") + " " + ToolCallFailedStyle.Render(msg.Content) + "\n")
 		case "toolcall_cancelled":
-			// Show cancelled tool calls in dim with ⚡ prefix
+			// Show cancelled tool calls in dim
 			sb.WriteString(ToolCallPrefixStyle.Render("⚡") + " " + ToolCallCancelledStyle.Render(msg.Content) + "\n")
 		}
 	}
@@ -711,8 +758,19 @@ func (m *Model) renderMessages() {
 	if m.isProcessing {
 		spinnerFrame := m.spinnerFrames[m.spinnerIndex%len(m.spinnerFrames)]
 		if m.streamBuffer.Len() > 0 {
+			// Render streaming content as markdown in real-time
 			sb.WriteString(AssistantLabelStyle.Render("Maahinen") + "\n")
-			sb.WriteString(m.streamBuffer.String())
+			streamContent := m.streamBuffer.String()
+			if m.mdRenderer != nil {
+				rendered, err := m.mdRenderer.Render(streamContent)
+				if err == nil {
+					sb.WriteString(rendered)
+				} else {
+					sb.WriteString(AssistantMessageStyle.Width(contentWidth).Render(streamContent) + "\n")
+				}
+			} else {
+				sb.WriteString(AssistantMessageStyle.Width(contentWidth).Render(streamContent) + "\n")
+			}
 			sb.WriteString(SpinnerStyle.Render(spinnerFrame) + "\n")
 		} else {
 			sb.WriteString(SpinnerStyle.Render(spinnerFrame+" Thinking...") + "\n")
@@ -804,9 +862,9 @@ func (m *Model) renderHeader() string {
 	// Auto-confirm toggle
 	autoConfirmHint := ""
 	if m.autoConfirmTools {
-		autoConfirmHint = AutoConfirmOnStyle.Render("auto-confirm: ON")
+		autoConfirmHint = AutoConfirmOnStyle.Render("tool auto-confirm (ctrl+a): ON")
 	} else {
-		autoConfirmHint = HelpStyle.Render("ctrl+a: auto-confirm")
+		autoConfirmHint = HelpStyle.Render("tool auto-confirm (ctrl+a): OFF")
 	}
 
 	return lipgloss.JoinHorizontal(
@@ -892,8 +950,18 @@ func (m *Model) renderToolPanel() string {
 				}
 				sb.WriteString(nameStyled + "\n")
 				if len(tc.Arguments) > 0 {
-					args := formatToolArgs(tc.Arguments, toolPanelWidth-6)
-					sb.WriteString(ToolArgsStyle.Render("  "+args) + "\n")
+					// Format each argument on its own line to prevent wrapping issues
+					for k, v := range tc.Arguments {
+						argStr := fmt.Sprintf("%s=%v", k, v)
+						maxArgLen := toolPanelWidth - 8
+						if maxArgLen < 10 {
+							maxArgLen = 10
+						}
+						if len(argStr) > maxArgLen {
+							argStr = argStr[:maxArgLen-3] + "..."
+						}
+						sb.WriteString(ToolArgsStyle.Render("  "+argStr) + "\n")
+					}
 				}
 			}
 		}
