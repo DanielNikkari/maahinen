@@ -21,9 +21,7 @@
 
 Maahinen is a playful CLI agentic coding assistant tool running on local LLMs through Ollama API.</br></br>**Maahinen** is a Finnish folklore being belonging to *haltijat*, they are small, subterranean, nature spirits associated with maa (earth). They live underground in their hidden society, in a mirror world of sorts. Maahiset (plural) are not exactly friendly, but not evil either. They are powerful neighbours, best treated with respect. Just like your average small LLM. ;)
 
-<video width="420" height="340" controls>
-  <source src="/docs/demo-video.mov" type="video/mp4">
-</video>
+[Demo](docs/demo.gif)
 
 ## Installation
 
