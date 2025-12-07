@@ -48,3 +48,12 @@ __debug_bin*
 # Local config (if you add one later)
 config.local.yaml
 config.local.json
+
+# Agentic coding tools
+.claude
+
+# Logs
+logs/
+
+# Built binary
+maahinen
